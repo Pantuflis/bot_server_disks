@@ -1,3 +1,4 @@
+from cProfile import run
 import datetime as dt
 import email
 import imaplib
@@ -12,24 +13,54 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set emails info
-user_mail = os.getenv('USER_MAIL')
+user_mail = os.getenv('TEST_MAIL')
 password = os.getenv('PASSWORD')
 receiver_mail = os.getenv('TEST_EMAIL')
-subject = 'Hey you, time to change the world, or the disk...'
-message = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?"
+subject_1 = 'Hey you, time to change the world, or the disk...'
+message_1 = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?\nOnce you chaged it, please respond this email with an Ok"
+subject_2 = 'Good job with those disks!'
+message_2 = "I'm impressed with your ability with those disks, there are now connected and ready. You can continue with your boring job"
 
+# Get the day and time in str format
 def date_now():
     now = dt.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
     return now
 
+# Get the day and time in str format plus some time you want
 def date_plus(plus):
     now_plus = (dt.datetime.now() + dt.timedelta(seconds=plus)).strftime("%d/%m/%Y %H:%M:%S")
     return now_plus
 
-# Check day ant time
+
+# Control the actual time against the time that the next process needs to start
+def get_checktime():
+    now = dt.datetime.now()
+    control_now = float(dt.datetime.now().strftime("%H.%M"))
+    control_time = 17.00
+    difference = str(round(float(control_now - control_time), 2))
+    splitted_time = difference.split('.')
+    splitted_time = list(map(int, splitted_time))
+    seconds_difference = splitted_time[0] * 3600 + splitted_time[1] * 60
+    seconds_difference = (86400 - seconds_difference)
+    next_check = (now + dt.timedelta(seconds=seconds_difference)).strftime("%d/%m/%Y %H:%M:%S")
+    return next_check
+
+def disconnect_disk():
+    cmd = Popen('cmd.exe', stdin = PIPE)
+    cmd.stdin.write(b"diskpart\n")
+    cmd.stdin.write(b"select volume 5\n")
+    cmd.stdin.write(b"remove dismount all")
+
+def connect_disk():
+    cmd = Popen('cmd.exe', stdin = PIPE)
+    cmd.stdin.write(b"diskpart\n")
+    cmd.stdin.write(b"select volume 5\n")
+    cmd.stdin.write(b"assign letter d")
+
+# Check day and time
 def check_day():
     today = dt.datetime.now().weekday()
-    if today == 2 or today == 5:
+    if today == 2 or today == 3:
         while today:
             is_sended = check_time()
             if is_sended:
@@ -41,14 +72,15 @@ def check_day():
 def check_time():
     hour = dt.datetime.now().time()
     str_hour = hour.strftime("%H.%M")
-    # float_hour = float(str_hour)
-    float_hour = 17.10
-    if float_hour > 17:
-        send_email()
-        return True
+    float_hour = float(str_hour)
+    # float_hour = 17.10
+    if float_hour >= 17:
+        disconnect_disk()
+        time.sleep(900)
+        send_email(subject_1, message_1)
 
 # Function to send email
-def send_email():
+def send_email(subject, message):
     with smtp.SMTP("smtp.gmail.com") as connection:
         connection.starttls()
         connection.login(user=user_mail, password=password)
@@ -59,19 +91,6 @@ def send_email():
         )
         now = date_now()
         print(f'Mail sended to {receiver_mail} - {now}')
-
-
-# def disconnect_disk():
-#     # os.popen('diskpart')
-#     # diskpart = Popen('diskpart.exe', stdin = PIPE)
-#     # diskpart.stdin.write(b"diskpart\n")
-#     # diskpart.stdin.write(b"list volume\n")
-#     # diskpart.stdin.write(b"select volume 5\n")
-#     # time.sleep(5)
-#     # time.sleep(15)
-#     # os.system('diskpart')
-#     os.system('cmd /k "diskpart')
-#     os.system('cmd /k "list volume')
 
 def read_emails(send_time):
     while True:
@@ -103,30 +122,34 @@ def read_emails(send_time):
 
             # Check if the email received is new                
                 if email_content[0:2] == ('ok'.lower()):
-                    # Reconect the disk
-                    print('respuesta ok')
                     now = date_now()
-                    print(email_time, send_time)
                     if email_time > send_time:
                         print(f'Response received successfully from {from_address}, connecting the disk... - {now}')
+                        connect_disk()
+                        time.sleep(5)
+                        send_email(subject_2, message_2)
                         break
                     else:
                         print(f'Waiting for email response "Ok" at {user_mail} - {now}')
-                        time.sleep(10)
+                        time.sleep(300)
                 
+def run():
+    while True:
+        is_day_correct = check_day()
+        if is_day_correct:            
+            now = date_now()
+            send_time = float(now[11:16].replace(":", "."))
+            time.sleep(10)
+            read_emails(send_time)
+            new_now = date_now()
+            now_plus = get_checktime()
+            print(f"Im sleeping from {new_now} to my next check at {now_plus}")
+            time.sleep(86400)
+        else:
+            now = date_now()
+            now_plus = date_plus(7200)
+            print(f"Im sleeping from {now} to my next check at {now_plus}")
+            time.sleep(900)
 
-while True:
-    is_day_correct = check_day()
-    if is_day_correct:            
-        now = date_now()
-        now_plus = date_plus(86400)
-        send_time = float(now[11:16].replace(":", "."))
-        time.sleep(10)
-        read_emails(send_time)
-        print(f"Im sleeping from {now} to my next check at {now_plus}")
-        time.sleep(86400)
-    else:
-        now = date_now()
-        now_plus = date_plus(7200)
-        print(f"Im sleeping from {now} to my next check at {now_plus}")
-        time.sleep(7200)
+if __name__ == "__main__":
+    run()
