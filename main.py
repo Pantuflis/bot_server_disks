@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set emails info
-user_mail = os.getenv('TEST_MAIL')
+user_mail = os.getenv('USER_MAIL')
 password = os.getenv('PASSWORD')
-receiver_mail = os.getenv('TEST_EMAIL')
+receiver_mail = os.getenv('RECEIVER_EMAIL')
 subject_1 = 'Hey you, time to change the world, or the disk...'
 message_1 = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?\nOnce you chaged it, please respond this email with an Ok"
 subject_2 = 'Good job with those disks!'
@@ -43,13 +43,14 @@ def get_checktime():
     seconds_difference = splitted_time[0] * 3600 + splitted_time[1] * 60
     seconds_difference = (86400 - seconds_difference)
     next_check = (now + dt.timedelta(seconds=seconds_difference)).strftime("%d/%m/%Y %H:%M:%S")
-    return next_check
+    return next_check, seconds_difference
 
 def disconnect_disk():
     cmd = Popen('cmd.exe', stdin = PIPE)
     cmd.stdin.write(b"diskpart\n")
     cmd.stdin.write(b"select volume 5\n")
     cmd.stdin.write(b"remove dismount all")
+    return True
 
 def connect_disk():
     cmd = Popen('cmd.exe', stdin = PIPE)
@@ -60,13 +61,11 @@ def connect_disk():
 # Check day and time
 def check_day():
     today = dt.datetime.now().weekday()
-    if today == 2 or today == 3:
+    if today == 2 or today == 1:
         while today:
             is_sended = check_time()
             if is_sended:
                 return True
-            else:
-                time.sleep(300)
 
 # Check time
 def check_time():
@@ -75,9 +74,12 @@ def check_time():
     float_hour = float(str_hour)
     # float_hour = 17.10
     if float_hour >= 17:
+        now = date_now()
+        print(f'Sequency initiated, disconnecting disk... - {now}')
         disconnect_disk()
-        time.sleep(900)
+        time.sleep(600)
         send_email(subject_1, message_1)
+        return True
 
 # Function to send email
 def send_email(subject, message):
@@ -123,7 +125,7 @@ def read_emails(send_time):
             # Check if the email received is new                
                 if email_content[0:2] == ('ok'.lower()):
                     now = date_now()
-                    if email_time > send_time:
+                    if email_time >= send_time:
                         print(f'Response received successfully from {from_address}, connecting the disk... - {now}')
                         connect_disk()
                         time.sleep(5)
@@ -142,12 +144,12 @@ def run():
             time.sleep(10)
             read_emails(send_time)
             new_now = date_now()
-            now_plus = get_checktime()
-            print(f"Im sleeping from {new_now} to my next check at {now_plus}")
-            time.sleep(86400)
+            check_time = get_checktime()
+            print(f"Im sleeping from {new_now} to my next check at {check_time[0]}")
+            time.sleep(check_time[1])
         else:
             now = date_now()
-            now_plus = date_plus(7200)
+            now_plus = date_plus(900)
             print(f"Im sleeping from {now} to my next check at {now_plus}")
             time.sleep(900)
 
