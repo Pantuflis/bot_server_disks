@@ -2,6 +2,7 @@ from cProfile import run
 import datetime as dt
 import email
 import imaplib
+import json
 import os
 import smtplib as smtp
 import time
@@ -16,6 +17,7 @@ load_dotenv()
 user_mail = os.getenv('USER_MAIL')
 password = os.getenv('PASSWORD')
 receiver_mail = os.getenv('RECEIVER_EMAIL')
+emails_dict = json.loads(receiver_mail)
 subject_1 = 'Hey you, time to change the world, or the disk...'
 message_1 = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?\nOnce you chaged it, please respond this email with an Ok"
 subject_2 = 'Good job with those disks!'
@@ -61,11 +63,16 @@ def connect_disk():
 # Check day and time
 def check_day():
     today = dt.datetime.now().weekday()
-    if today == 2 or today == 1:
+    if today == 2 or today == 4:
         while today:
             is_sended = check_time()
             if is_sended:
                 return True
+            else:
+                now = date_now()
+                now_plus = date_plus(900)
+                print(f"Im sleeping from {now} to my next check at {now_plus}")
+                time.sleep(900)                
 
 # Check time
 def check_time():
@@ -94,8 +101,50 @@ def send_email(subject, message):
         now = date_now()
         print(f'Mail sended to {receiver_mail} - {now}')
 
+def replace_months(month):
+    months = {
+        'Jan': 1,
+        'Feb': 2,
+        'Mar': 3,
+        'Apr': 4,
+        'May': 5,
+        'Jun': 6,
+        'Jul': 7,
+        'Aug': 8,
+        'Sep': 9,
+        'Oct': 10,
+        'Nov': 11,
+        'Dec': 12,
+    }
+    return str(months[month])
+
+def get_email_time(email_date):
+    email_date = email_date.replace(':', ' ')
+    date = email_date.split(" ")
+    month = replace_months(date[1])
+    date[1] = month
+    int_dates = [int(string) for string in date]
+    email_time = dt.datetime(int_dates[2], int_dates[1], int_dates[0], int_dates[3], int_dates[4], int_dates[5])
+    return email_time
+
+def check_email_time(email_content, email_time, send_time, from_address):
+# Check if the email received is new                
+    if email_content[0:2].lower() == ('ok'):
+        now = date_now()
+        if email_time >= send_time:
+            print(f'Response received successfully from {from_address}, connecting the disk... - {now}')
+            connect_disk()
+            time.sleep(5)
+            send_email(subject_2, message_2)
+            return False
+        else:
+            print(f'Waiting for email response "Ok" at {user_mail} - {now}')
+            time.sleep(300)
+
+
 def read_emails(send_time):
-    while True:
+    is_email_sent = False
+    while not is_email_sent:
         with imaplib.IMAP4_SSL('imap.gmail.com') as connection:
             connection.login(user_mail, password)
             connection.select('inbox')
@@ -110,7 +159,8 @@ def read_emails(send_time):
             raw_email = email_data[0][1].decode('utf-8')
             email_message = email.message_from_string(raw_email)
             from_address = email_message['From']
-            email_time = float(email_message['Date'][17:22].replace(':', '.'))
+            email_date = email_message['Date'][5:25]
+            email_time = get_email_time(email_date)
 
             # Loop in the email lookin the different items in it
             for part in email_message.walk():
@@ -121,37 +171,27 @@ def read_emails(send_time):
                 html_content = part.get_payload()
                 soup = BeautifulSoup(html_content, 'html.parser')
                 email_content = soup.get_text()
+                is_email_sent = check_email_time(email_content, email_time, send_time, from_address)
+            elif 'alternative' in content_type:
+                alternative_content = part.get_payload()
+                alternative_content = alternative_content[1].get_payload()
+                soup = BeautifulSoup(alternative_content, 'html.parser')
+                email_content = soup.get_text()
+                is_email_sent = check_email_time(email_content, email_time, send_time, from_address)
 
-            # Check if the email received is new                
-                if email_content[0:2] == ('ok'.lower()):
-                    now = date_now()
-                    if email_time >= send_time:
-                        print(f'Response received successfully from {from_address}, connecting the disk... - {now}')
-                        connect_disk()
-                        time.sleep(5)
-                        send_email(subject_2, message_2)
-                        break
-                    else:
-                        print(f'Waiting for email response "Ok" at {user_mail} - {now}')
-                        time.sleep(300)
                 
 def run():
     while True:
         is_day_correct = check_day()
         if is_day_correct:            
-            now = date_now()
-            send_time = float(now[11:16].replace(":", "."))
+            send_time = dt.datetime.now()
             time.sleep(10)
             read_emails(send_time)
             new_now = date_now()
             check_time = get_checktime()
             print(f"Im sleeping from {new_now} to my next check at {check_time[0]}")
             time.sleep(check_time[1])
-        else:
-            now = date_now()
-            now_plus = date_plus(900)
-            print(f"Im sleeping from {now} to my next check at {now_plus}")
-            time.sleep(900)
+
 
 if __name__ == "__main__":
     run()
