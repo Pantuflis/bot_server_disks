@@ -1,4 +1,4 @@
-from cProfile import run
+from art import menu_title_art
 import datetime as dt
 import email
 import imaplib
@@ -14,14 +14,52 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Set emails info
-user_mail = os.getenv('USER_MAIL')
+user_email = os.getenv('USER_EMAIL')
 password = os.getenv('PASSWORD')
-receiver_mail = os.getenv('RECEIVER_EMAIL')
-emails_dict = json.loads(receiver_mail)
+receiver_email = os.getenv('RECEIVER_EMAIL')
+emails_dict = json.loads(receiver_email)
+emails_list = list(emails_dict.values())
 subject_1 = 'Hey you, time to change the world, or the disk...'
 message_1 = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?\nOnce you chaged it, please respond this email with an Ok"
 subject_2 = 'Good job with those disks!'
 message_2 = "I'm impressed with your ability with those disks, there are now connected and ready. You can continue with your boring job"
+
+
+
+# Start menu
+def start_menu():
+    print(menu_title_art)
+    print("###########################################################################\n")
+    print("[1] Admin     [roberto.di.bartolomeo123@gmail.com]")
+    print("[2] Roberto   [roberto.estudiodc@gmail.com]")
+    print("[3] Martin    [martin.estudiodc@gmail.com]")
+    print("[4] Camila    [camila.estudiodc@gmail.com]")
+    print("[5] Victoria  [victoria.estudiodc@gmail.com]")
+    print("[6] Juan      [juan.estudiodc@gmail.com]")
+    print("[7] Exit\n")
+    options = [1, 2, 3, 4, 5, 6]
+    option_selected = int(input("Please select an option from the list: "))
+    if option_selected == 7:
+        print("Closing program...")
+        time.sleep(2)
+        exit()
+    elif option_selected in options:
+        global email_selected
+        email_selected = emails_list[option_selected - 1]
+        confirm_selection = input(f"The email selected is {email_selected}, you want to continue? [Y/N]: ")
+        if confirm_selection.lower() == "y":
+            print("Starting program...")
+            time.sleep(5)
+            os.system("cls")
+            start_bot()
+        elif confirm_selection.lower() == "n":
+            os.system("cls")
+            start_menu()
+    else:
+        print("Please select a valid option from the list")
+        time.sleep(5)
+        start_menu()
+
 
 # Get the day and time in str format
 def date_now():
@@ -63,7 +101,7 @@ def connect_disk():
 # Check day and time
 def check_day():
     today = dt.datetime.now().weekday()
-    if today == 2 or today == 4:
+    if today == 1 or today == 4:
         while today:
             is_sended = check_time()
             if is_sended:
@@ -71,8 +109,8 @@ def check_day():
             else:
                 now = date_now()
                 now_plus = date_plus(900)
-                print(f"Im sleeping from {now} to my next check at {now_plus}")
-                time.sleep(900)                
+                print(f"[{now}] I'm sleeping from {now} to my next check at {now_plus}")
+                time.sleep(9)                
 
 # Check time
 def check_time():
@@ -82,9 +120,9 @@ def check_time():
     # float_hour = 17.10
     if float_hour >= 17:
         now = date_now()
-        print(f'Sequency initiated, disconnecting disk... - {now}')
-        disconnect_disk()
-        time.sleep(600)
+        print(f'[{now}] Sequency initiated, disconnecting disk...')
+        # disconnect_disk()
+        time.sleep(6)
         send_email(subject_1, message_1)
         return True
 
@@ -92,14 +130,14 @@ def check_time():
 def send_email(subject, message):
     with smtp.SMTP("smtp.gmail.com") as connection:
         connection.starttls()
-        connection.login(user=user_mail, password=password)
+        connection.login(user=user_email, password=password)
         connection.sendmail(
-            from_addr=user_mail,
-            to_addrs=receiver_mail,
+            from_addr=user_email,
+            to_addrs=email_selected,
             msg=f"Subject: {subject}\n\n{message}"
         )
         now = date_now()
-        print(f'Mail sended to {receiver_mail} - {now}')
+        print(f'[{now}] Mail sended to {email_selected} ')
 
 def replace_months(month):
     months = {
@@ -120,33 +158,33 @@ def replace_months(month):
 
 def get_email_time(email_date):
     email_date = email_date.replace(':', ' ')
-    date = email_date.split(" ")
-    month = replace_months(date[1])
-    date[1] = month
-    int_dates = [int(string) for string in date]
-    email_time = dt.datetime(int_dates[2], int_dates[1], int_dates[0], int_dates[3], int_dates[4], int_dates[5])
+    split_email_date = email_date.split(" ")
+    month = replace_months(split_email_date[1])
+    split_email_date[1] = month
+    int_email_date = [int(string) for string in split_email_date]
+    email_time = dt.datetime(int_email_date[2], int_email_date[1], int_email_date[0], int_email_date[3], int_email_date[4], int_email_date[5])
     return email_time
 
 def check_email_time(email_content, email_time, send_time, from_address):
 # Check if the email received is new                
     if email_content[0:2].lower() == ('ok'):
         now = date_now()
-        if email_time >= send_time:
-            print(f'Response received successfully from {from_address}, connecting the disk... - {now}')
-            connect_disk()
+        if email_time > send_time:
+            print(f'[{now}] Response received successfully from {from_address}, connecting the disk...')
+            # connect_disk()
             time.sleep(5)
             send_email(subject_2, message_2)
-            return False
+            return True
         else:
-            print(f'Waiting for email response "Ok" at {user_mail} - {now}')
-            time.sleep(300)
+            print(f'[{now}] Waiting for email response "Ok" at {user_email}')
+            time.sleep(3)
 
 
 def read_emails(send_time):
     is_email_sent = False
     while not is_email_sent:
         with imaplib.IMAP4_SSL('imap.gmail.com') as connection:
-            connection.login(user_mail, password)
+            connection.login(user_email, password)
             connection.select('inbox')
 
             # Search all the emails ids in the inbox
@@ -180,7 +218,7 @@ def read_emails(send_time):
                 is_email_sent = check_email_time(email_content, email_time, send_time, from_address)
 
                 
-def run():
+def start_bot():
     while True:
         is_day_correct = check_day()
         if is_day_correct:            
@@ -189,9 +227,9 @@ def run():
             read_emails(send_time)
             new_now = date_now()
             check_time = get_checktime()
-            print(f"Im sleeping from {new_now} to my next check at {check_time[0]}")
+            print(f"[{new_now}] I'm sleeping from {new_now} to my next check at {check_time[0]}")
             time.sleep(check_time[1])
 
 
 if __name__ == "__main__":
-    run()
+    start_menu()
