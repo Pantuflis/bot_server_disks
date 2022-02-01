@@ -18,6 +18,7 @@ user_email = os.getenv('USER_EMAIL')
 password = os.getenv('PASSWORD')
 receiver_email = os.getenv('RECEIVER_EMAIL')
 emails_dict = json.loads(receiver_email)
+emails_keys = list(emails_dict.keys())
 emails_list = list(emails_dict.values())
 subject_1 = 'Hey you, time to change the world, or the disk...'
 message_1 = "Hey there Martin, it's time to change our backup disks, you don't want to get hack again don't you?\nOnce you chaged it, please respond this email with an Ok"
