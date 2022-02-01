@@ -30,13 +30,13 @@ message_2 = "I'm impressed with your ability with those disks, there are now con
 def start_menu():
     print(menu_title_art)
     print("###########################################################################\n")
-    print("[1] Admin     [roberto.di.bartolomeo123@gmail.com]")
-    print("[2] Roberto   [roberto.estudiodc@gmail.com]")
-    print("[3] Martin    [martin.estudiodc@gmail.com]")
-    print("[4] Camila    [camila.estudiodc@gmail.com]")
-    print("[5] Victoria  [victoria.estudiodc@gmail.com]")
-    print("[6] Juan      [juan.estudiodc@gmail.com]")
-    print("[7] Exit\n")
+    print(f"[1] Admin     [{emails_list[0]}]")
+    print(f"[2] Roberto   [{emails_list[1]}]")
+    print(f"[3] Martin    [{emails_list[2]}]")
+    print(f"[4] Camila    [{emails_list[3]}]")
+    print(f"[5] Victoria  [{emails_list[4]}]")
+    print(f"[6] Juan      [{emails_list[5]}]")
+    print(f"[7] Exit\n")
     options = [1, 2, 3, 4, 5, 6]
     option_selected = int(input("Please select an option from the list: "))
     if option_selected == 7:
