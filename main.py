@@ -102,7 +102,7 @@ def connect_disk():
 # Check day and time
 def check_day():
     today = dt.datetime.now().weekday()
-    if today == 1 or today == 4:
+    if today == 2 or today == 4:
         while today:
             is_sended = check_time()
             if is_sended:
@@ -111,7 +111,7 @@ def check_day():
                 now = date_now()
                 now_plus = date_plus(900)
                 print(f"[{now}] I'm sleeping from {now} to my next check at {now_plus}")
-                time.sleep(9)                
+                time.sleep(900)                
 
 # Check time
 def check_time():
@@ -122,8 +122,8 @@ def check_time():
     if float_hour >= 17:
         now = date_now()
         print(f'[{now}] Sequency initiated, disconnecting disk...')
-        # disconnect_disk()
-        time.sleep(6)
+        disconnect_disk()
+        time.sleep(600)
         send_email(subject_1, message_1)
         return True
 
@@ -172,13 +172,13 @@ def check_email_time(email_content, email_time, send_time, from_address):
         now = date_now()
         if email_time > send_time:
             print(f'[{now}] Response received successfully from {from_address}, connecting the disk...')
-            # connect_disk()
+            connect_disk()
             time.sleep(5)
             send_email(subject_2, message_2)
             return True
         else:
             print(f'[{now}] Waiting for email response "Ok" at {user_email}')
-            time.sleep(3)
+            time.sleep(300)
 
 
 def read_emails(send_time):
@@ -187,7 +187,6 @@ def read_emails(send_time):
         with imaplib.IMAP4_SSL('imap.gmail.com') as connection:
             connection.login(user_email, password)
             connection.select('inbox')
-
             # Search all the emails ids in the inbox
             result, data = connection.uid('search', None, 'ALL')
             inbox_emails = data[0].split()
@@ -198,7 +197,7 @@ def read_emails(send_time):
             raw_email = email_data[0][1].decode('utf-8')
             email_message = email.message_from_string(raw_email)
             from_address = email_message['From']
-            email_date = email_message['Date'][5:25]
+            email_date = email_message['Date'][5:24]
             email_time = get_email_time(email_date)
 
             # Loop in the email lookin the different items in it
@@ -206,6 +205,7 @@ def read_emails(send_time):
                 if part.get_content_maintype() == "multipart":
                     break
             content_type = part.get_content_type()
+            print(content_type)
             if 'html' in content_type:
                 html_content = part.get_payload()
                 soup = BeautifulSoup(html_content, 'html.parser')
@@ -215,6 +215,12 @@ def read_emails(send_time):
                 alternative_content = part.get_payload()
                 alternative_content = alternative_content[1].get_payload()
                 soup = BeautifulSoup(alternative_content, 'html.parser')
+                email_content = soup.get_text()
+                is_email_sent = check_email_time(email_content, email_time, send_time, from_address)
+            elif 'related' in content_type:
+                related_content = part.get_payload()
+                related_content = related_content[0].get_payload()
+                soup = BeautifulSoup(related_content, 'html.parser')
                 email_content = soup.get_text()
                 is_email_sent = check_email_time(email_content, email_time, send_time, from_address)
 
