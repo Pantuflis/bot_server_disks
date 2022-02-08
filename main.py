@@ -232,10 +232,15 @@ def start_bot():
             send_time = dt.datetime.now()
             time.sleep(10)
             read_emails(send_time)
-            new_now = date_now()
+            now = date_now()
             check_time = get_checktime()
-            print(f"[{new_now}] I'm sleeping from {new_now} to my next check at {check_time[0]}")
+            print(f"[{now}] I'm sleeping from {now} to my next check at {check_time[0]}")
             time.sleep(check_time[1])
+        else:
+            now = date_now()
+            wake_up_time = get_checktime()
+            print(f"[{now}] I'm sleeping from {now} to my next check at {wake_up_time[0]}")
+            time.sleep(wake_up_time[1])
 
 
 if __name__ == "__main__":
